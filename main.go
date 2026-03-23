@@ -27,11 +27,20 @@ func main() {
 
 	log.Println("✅ Connected to DB")
 
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080" // ใช้ตอน local
+	}
+
 	r := gin.Default()
+
+	r.GET("/ping", func(c *gin.Context) {
+		c.JSON(200, gin.H{"message": "pong"})
+	})
 
 	r.POST("/trade", createTrade)
 
-	r.Run(":8080")
+	r.Run(":" + port) // 👈 ต้องใช้แบบนี้
 }
 
 type Trade struct {
