@@ -1,17 +1,14 @@
-# ใช้ Go image
 FROM golang:1.22
 
-# ตั้ง working directory
 WORKDIR /app
 
-# copy file
+# copy go mod ก่อน (เร็วขึ้น + fix error)
+COPY go.mod go.sum ./
+RUN go mod download
+
+# copy code
 COPY . .
 
-# download dependency
-RUN go mod tidy
-
-# build binary
 RUN go build -o app
 
-# run app
 CMD ["./app"]
