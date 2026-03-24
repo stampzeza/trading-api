@@ -1,9 +1,10 @@
-FROM golang:1.25.0
+FROM golang:1.25
 
 WORKDIR /app
 
-# copy go mod ก่อน (เร็วขึ้น + fix error)
+# copy mod ก่อน
 COPY go.mod go.sum ./
+
 RUN go mod download
 
 # copy code
