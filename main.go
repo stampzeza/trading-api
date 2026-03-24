@@ -17,7 +17,7 @@ func main() {
 	// 👉 ใส่ตรงนี้เลย
 	connStr := os.Getenv("DATABASE_URL")
 	if connStr == "" {
-		connStr = "postgres://postgres:1234@localhost:5432/trading?sslmode=disable"
+		log.Fatal("❌ DATABASE_URL not set")
 	}
 
 	db, err = pgx.Connect(context.Background(), connStr)
