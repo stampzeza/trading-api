@@ -37,10 +37,9 @@ func main() {
 	r.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{"message": "pong"})
 	})
-
 	r.POST("/trade", createTrade)
-
 	r.POST("/addSignal", createTradeSignal)
+	r.GET("/signals", getTradeSignals)
 
 	r.Run(":" + port) // 👈 ต้องใช้แบบนี้
 }
@@ -77,6 +76,7 @@ func createTrade(c *gin.Context) {
 }
 
 type TradeSignal struct {
+	ID        int     `json:"id"`
 	Symbol    string  `json:"symbol"`
 	Type      string  `json:"type"`
 	Price     float64 `json:"price"`
@@ -106,4 +106,43 @@ func createTradeSignal(c *gin.Context) {
 	}
 
 	c.JSON(200, gin.H{"status": "saved Create Signal Success."})
+}
+
+func getTradeSignals(c *gin.Context) {
+	rows, err := db.Query(context.Background(), `
+		SELECT id, symbol, signal, lot, price, created_at 
+		FROM tbtradesignal
+		ORDER BY id DESC
+	`)
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	defer rows.Close()
+
+	var results []TradeSignal
+
+	for rows.Next() {
+		var t TradeSignal
+
+		err := rows.Scan(
+			&t.ID,
+			&t.Symbol,
+			&t.Type,
+			&t.Price,
+			&t.Tp,
+			&t.Sl,
+			&t.IsActive,
+			&t.Status,
+			&t.CreatedAt,
+		)
+		if err != nil {
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
+
+		results = append(results, t)
+	}
+
+	c.JSON(200, results)
 }
