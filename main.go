@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"os"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5"
@@ -124,6 +125,7 @@ func getTradeSignals(c *gin.Context) {
 
 	for rows.Next() {
 		var t TradeSignal
+		var createdAt time.Time
 
 		err := rows.Scan(
 			&t.ID,
@@ -134,8 +136,10 @@ func getTradeSignals(c *gin.Context) {
 			&t.Sl,
 			&t.Status,
 			&t.IsActive,
-			&t.CreatedAt,
+			&createdAt,
 		)
+		t.CreatedAt = createdAt.Format("2006-01-02 15:04:05")
+
 		if err != nil {
 			c.JSON(500, gin.H{"error": err.Error()})
 			return
