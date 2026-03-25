@@ -194,13 +194,16 @@ func wsHandler(c *gin.Context) {
 	clients[conn] = true
 	log.Println("✅ Client connected")
 
-	// 🔥 keep alive
+	// 🔥 ส่งข้อมูลครั้งแรก
+	go func() {
+		pushLatestSignalsToClient(conn)
+	}()
+
+	// keep alive
 	go func() {
 		for {
 			time.Sleep(20 * time.Second)
-
 			if err := conn.WriteMessage(websocket.PingMessage, nil); err != nil {
-				log.Println("❌ Ping failed:", err)
 				conn.Close()
 				delete(clients, conn)
 				return
@@ -208,11 +211,10 @@ func wsHandler(c *gin.Context) {
 		}
 	}()
 
-	// 🔥 read loop (สำคัญ)
+	// read loop
 	for {
 		_, _, err := conn.ReadMessage()
 		if err != nil {
-			log.Println("❌ Client disconnected:", err)
 			conn.Close()
 			delete(clients, conn)
 			break
@@ -338,4 +340,39 @@ func pushLatestSignals() {
 			delete(clients, client)
 		}
 	}
+}
+func pushLatestSignalsToClient(conn *websocket.Conn) {
+	rows, err := db.Query(context.Background(), `
+		SELECT id, symbol, type, price, tp, sl, status, isactive, created_at 
+		FROM "tbTradeSignal"
+		ORDER BY id DESC
+	`)
+	if err != nil {
+		return
+	}
+	defer rows.Close()
+
+	var results []TradeSignal
+
+	for rows.Next() {
+		var t TradeSignal
+		var createdAt time.Time
+
+		rows.Scan(
+			&t.ID,
+			&t.Symbol,
+			&t.Type,
+			&t.Price,
+			&t.Tp,
+			&t.Sl,
+			&t.Status,
+			&t.IsActive,
+			&createdAt,
+		)
+
+		t.CreatedAt = createdAt.Format("2006-01-02 15:04:05")
+		results = append(results, t)
+	}
+
+	conn.WriteJSON(results)
 }
