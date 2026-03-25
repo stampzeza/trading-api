@@ -18,6 +18,7 @@ var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
 		return true
 	},
+	EnableCompression: true, // 🔥 เพิ่มตัวนี้
 }
 
 func main() {
@@ -178,7 +179,14 @@ func CORSMiddleware() gin.HandlerFunc {
 func wsHandler(c *gin.Context) {
 	log.Println("🔥 WS HIT")
 
-	c.JSON(200, gin.H{"msg": "ws route hit"})
+	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
+	if err != nil {
+		log.Println("❌ Upgrade error:", err)
+		return
+	}
+
+	clients[conn] = true
+	log.Println("✅ Client connected")
 }
 func broadcastSignals() {
 	for {
