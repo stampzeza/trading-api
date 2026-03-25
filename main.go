@@ -111,7 +111,7 @@ func createTradeSignal(c *gin.Context) {
 func getTradeSignals(c *gin.Context) {
 	rows, err := db.Query(context.Background(), `
 		SELECT id, symbol, signal, lot, price, created_at 
-		FROM tbtradesignal
+		FROM "tbTradeSignal"
 		ORDER BY id DESC
 	`)
 	if err != nil {
