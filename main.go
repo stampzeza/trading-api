@@ -191,7 +191,12 @@ func wsHandler(c *gin.Context) {
 		log.Println("Upgrade error:", err)
 		return
 	}
+	conn.SetReadDeadline(time.Now().Add(60 * time.Second))
 
+	conn.SetPongHandler(func(string) error {
+		conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+		return nil
+	})
 	clients[conn] = true
 	log.Println("✅ Client connected")
 
@@ -204,7 +209,9 @@ func wsHandler(c *gin.Context) {
 	go func() {
 		for {
 			time.Sleep(20 * time.Second)
-			if err := conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+
+			err := conn.WriteMessage(websocket.PingMessage, nil)
+			if err != nil {
 				conn.Close()
 				delete(clients, conn)
 				return
