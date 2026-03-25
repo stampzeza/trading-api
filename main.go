@@ -187,6 +187,17 @@ func wsHandler(c *gin.Context) {
 
 	clients[conn] = true
 	log.Println("✅ Client connected")
+
+	// 🔥 สำคัญ: ต้องมี loop ค้างไว้
+	for {
+		_, _, err := conn.ReadMessage()
+		if err != nil {
+			log.Println("❌ Client disconnected:", err)
+			delete(clients, conn)
+			conn.Close()
+			break
+		}
+	}
 }
 func broadcastSignals() {
 	for {
