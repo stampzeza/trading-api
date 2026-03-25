@@ -77,14 +77,14 @@ func createTrade(c *gin.Context) {
 }
 
 type TradeSignal struct {
-	Symbol   string  `json:"symbol"`
-	Type     string  `json:"type"`
-	Price    float64 `json:"price"`
-	Tp       float64 `json:"tp"`
-	Sl       float64 `json:"sl"`
-	IsActive bool    `json:"isActive"`
-	Status   int     `json:"status"`
-	CreateAt string  `json:"create_at"`
+	Symbol    string  `json:"symbol"`
+	Type      string  `json:"type"`
+	Price     float64 `json:"price"`
+	Tp        float64 `json:"tp"`
+	Sl        float64 `json:"sl"`
+	IsActive  bool    `json:"isActive"`
+	Status    int     `json:"status"`
+	CreatedAt string  `json:"created_at"`
 }
 
 func createTradeSignal(c *gin.Context) {
@@ -95,9 +95,9 @@ func createTradeSignal(c *gin.Context) {
 	}
 
 	_, err := db.Exec(context.Background(),
-		`INSERT INTO "tbTradeSignal" (symbol, type, price, tp, sl, isActive, status, create_at)
+		`INSERT INTO "tbTradeSignal" (symbol, type, price, tp, sl, isActive, status, created_at)
 		 VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
-		t.Symbol, t.Type, t.Price, t.Tp, t.Sl, t.IsActive, t.Status, t.CreateAt,
+		t.Symbol, t.Type, t.Price, t.Tp, t.Sl, t.IsActive, t.Status, t.CreatedAt,
 	)
 
 	if err != nil {
