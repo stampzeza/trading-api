@@ -42,7 +42,9 @@ func main() {
 		port = "8080" // ใช้ตอน local
 	}
 	go listenSignalChanges()
-	r := gin.Default()
+	r := gin.New()
+	r.Use(gin.Logger())
+	r.Use(gin.Recovery())
 	r.Use(CORSMiddleware())
 	r.GET("/ws", wsHandler)
 	r.GET("/ping", func(c *gin.Context) {
@@ -163,11 +165,17 @@ func getTradeSignals(c *gin.Context) {
 
 func CORSMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
+
+		// 🔥 ข้าม WebSocket
+		if c.Request.URL.Path == "/ws" {
+			c.Next()
+			return
+		}
+
 		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
 		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 
-		// handle preflight request
 		if c.Request.Method == "OPTIONS" {
 			c.AbortWithStatus(204)
 			return
@@ -179,7 +187,9 @@ func CORSMiddleware() gin.HandlerFunc {
 func wsHandler(c *gin.Context) {
 	log.Println("🔥 WS HIT")
 
-	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
+	conn, err := upgrader.Upgrade(c.Writer, c.Request, http.Header{
+		"Access-Control-Allow-Origin": []string{"*"},
+	})
 	if err != nil {
 		log.Println("❌ Upgrade error:", err)
 		return
