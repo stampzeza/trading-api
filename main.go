@@ -3,14 +3,22 @@ package main
 import (
 	"context"
 	"log"
+	"net/http"
 	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gorilla/websocket"
 	"github.com/jackc/pgx/v5"
 )
 
 var db *pgx.Conn
+var clients = make(map[*websocket.Conn]bool)
+var upgrader = websocket.Upgrader{
+	CheckOrigin: func(r *http.Request) bool {
+		return true
+	},
+}
 
 func main() {
 	var err error
@@ -32,9 +40,10 @@ func main() {
 	if port == "" {
 		port = "8080" // ใช้ตอน local
 	}
-
+	go listenSignalChanges()
 	r := gin.Default()
 	r.Use(CORSMiddleware())
+	r.GET("/ws", wsHandler)
 	r.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{"message": "pong"})
 	})
@@ -164,5 +173,145 @@ func CORSMiddleware() gin.HandlerFunc {
 		}
 
 		c.Next()
+	}
+}
+func wsHandler(c *gin.Context) {
+	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
+	if err != nil {
+		log.Println("WebSocket upgrade error:", err)
+		return
+	}
+
+	clients[conn] = true
+	log.Println("✅ Client connected")
+
+	for {
+		// รอ client disconnect
+		if _, _, err := conn.ReadMessage(); err != nil {
+			log.Println("❌ Client disconnected")
+			delete(clients, conn)
+			conn.Close()
+			break
+		}
+	}
+}
+func broadcastSignals() {
+	for {
+		rows, err := db.Query(context.Background(), `
+			SELECT id, symbol, type, price, tp, sl, status, isactive, created_at 
+			FROM "tbTradeSignal"
+			ORDER BY id DESC
+		`)
+		if err != nil {
+			log.Println("DB error:", err)
+			time.Sleep(3 * time.Second)
+			continue
+		}
+
+		var results []TradeSignal
+
+		for rows.Next() {
+			var t TradeSignal
+			var createdAt time.Time
+
+			rows.Scan(
+				&t.ID,
+				&t.Symbol,
+				&t.Type,
+				&t.Price,
+				&t.Tp,
+				&t.Sl,
+				&t.Status,
+				&t.IsActive,
+				&createdAt,
+			)
+
+			t.CreatedAt = createdAt.Format("2006-01-02 15:04:05")
+			results = append(results, t)
+		}
+
+		rows.Close()
+
+		// 🔥 ยิงให้ทุก client
+		for client := range clients {
+			err := client.WriteJSON(results)
+			if err != nil {
+				log.Println("Write error:", err)
+				client.Close()
+				delete(clients, client)
+			}
+		}
+
+		time.Sleep(3 * time.Second) // 🔥 realtime ทุก 3 วิ
+	}
+}
+func listenSignalChanges() {
+	conn, err := pgx.Connect(context.Background(), os.Getenv("DATABASE_URL"))
+	if err != nil {
+		log.Println("Listen DB error:", err)
+		return
+	}
+
+	_, err = conn.Exec(context.Background(), "LISTEN signal_channel")
+	if err != nil {
+		log.Println("LISTEN error:", err)
+		return
+	}
+
+	log.Println("👂 Listening for DB changes...")
+
+	for {
+		notification, err := conn.WaitForNotification(context.Background())
+		if err != nil {
+			log.Println("Wait error:", err)
+			continue
+		}
+
+		log.Println("🔥 DB Changed:", notification.Payload)
+
+		pushLatestSignals()
+	}
+}
+func pushLatestSignals() {
+	rows, err := db.Query(context.Background(), `
+		SELECT id, symbol, type, price, tp, sl, status, isactive, created_at 
+		FROM "tbTradeSignal"
+		ORDER BY id DESC
+	`)
+	if err != nil {
+		log.Println("DB error:", err)
+		return
+	}
+	defer rows.Close()
+
+	var results []TradeSignal
+
+	for rows.Next() {
+		var t TradeSignal
+		var createdAt time.Time
+
+		rows.Scan(
+			&t.ID,
+			&t.Symbol,
+			&t.Type,
+			&t.Price,
+			&t.Tp,
+			&t.Sl,
+			&t.Status,
+			&t.IsActive,
+			&createdAt,
+		)
+
+		t.CreatedAt = createdAt.Format("2006-01-02 15:04:05")
+		results = append(results, t)
+	}
+
+	// 🔥 ยิงหา client
+	for client := range clients {
+		err := client.WriteJSON(results)
+		if err != nil {
+			client.Close()
+			delete(clients, client)
+		}
 	}
 }
