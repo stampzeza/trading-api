@@ -95,7 +95,7 @@ func createTradeSignal(c *gin.Context) {
 	}
 
 	_, err := db.Exec(context.Background(),
-		`INSERT INTO tbTradeSignal (symbol, type, price, tp, sl, isActive, status, create_at)
+		`INSERT INTO "tbTradeSignal" (symbol, type, price, tp, sl, isActive, status, create_at)
 		 VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
 		t.Symbol, t.Type, t.Price, t.Tp, t.Sl, t.IsActive, t.Status, t.CreateAt,
 	)
