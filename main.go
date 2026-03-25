@@ -40,6 +40,8 @@ func main() {
 
 	r.POST("/trade", createTrade)
 
+	r.POST("/addSignal", createTradeSignal)
+
 	r.Run(":" + port) // 👈 ต้องใช้แบบนี้
 }
 
@@ -72,4 +74,36 @@ func createTrade(c *gin.Context) {
 	}
 
 	c.JSON(200, gin.H{"status": "saved"})
+}
+
+type TradeSignal struct {
+	Symbol   string  `json:"symbol"`
+	Type     string  `json:"type"`
+	Price    float64 `json:"price"`
+	Tp       float64 `json:"tp"`
+	Sl       float64 `json:"sl"`
+	IsActive bool    `json:"isActive"`
+	Status   int     `json:"status"`
+	CreateAt string  `json:"create_at"`
+}
+
+func createTradeSignal(c *gin.Context) {
+	var t TradeSignal
+	if err := c.ShouldBindJSON(&t); err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+
+	_, err := db.Exec(context.Background(),
+		`INSERT INTO tbTradeSignal (symbol, type, price, tp, sl, isActive, status, create_at)
+		 VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+		t.Symbol, t.Type, t.Price, t.Tp, t.Sl, t.IsActive, t.Status, t.CreateAt,
+	)
+
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{"status": "saved Create Signal Success."})
 }
