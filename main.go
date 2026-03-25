@@ -16,7 +16,7 @@ var db *pgx.Conn
 var clients = make(map[*websocket.Conn]bool)
 var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
-		return true
+		return true // 🔥 อนุญาตทุก origin (ใช้ตอน dev)
 	},
 }
 
@@ -178,22 +178,12 @@ func CORSMiddleware() gin.HandlerFunc {
 func wsHandler(c *gin.Context) {
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
-		log.Println("WebSocket upgrade error:", err)
+		log.Println(err)
 		return
 	}
 
 	clients[conn] = true
 	log.Println("✅ Client connected")
-
-	for {
-		// รอ client disconnect
-		if _, _, err := conn.ReadMessage(); err != nil {
-			log.Println("❌ Client disconnected")
-			delete(clients, conn)
-			conn.Close()
-			break
-		}
-	}
 }
 func broadcastSignals() {
 	for {
