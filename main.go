@@ -185,26 +185,36 @@ func CORSMiddleware() gin.HandlerFunc {
 	}
 }
 func wsHandler(c *gin.Context) {
-	log.Println("🔥 WS HIT")
-
-	conn, err := upgrader.Upgrade(c.Writer, c.Request, http.Header{
-		"Access-Control-Allow-Origin": []string{"*"},
-	})
+	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
-		log.Println("❌ Upgrade error:", err)
+		log.Println("Upgrade error:", err)
 		return
 	}
 
 	clients[conn] = true
 	log.Println("✅ Client connected")
 
-	// 🔥 สำคัญ: ต้องมี loop ค้างไว้
+	// 🔥 keep alive
+	go func() {
+		for {
+			time.Sleep(20 * time.Second)
+
+			if err := conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+				log.Println("❌ Ping failed:", err)
+				conn.Close()
+				delete(clients, conn)
+				return
+			}
+		}
+	}()
+
+	// 🔥 read loop (สำคัญ)
 	for {
 		_, _, err := conn.ReadMessage()
 		if err != nil {
 			log.Println("❌ Client disconnected:", err)
-			delete(clients, conn)
 			conn.Close()
+			delete(clients, conn)
 			break
 		}
 	}
