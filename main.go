@@ -29,7 +29,7 @@ func main() {
 	r.POST("/trade", handler.CreateTrade)
 	r.POST("/addSignal", handler.CreateTradeSignal)
 	r.POST("/updateSignal", handler.UpdateTradeSignal)
-	r.GET("/signals", handler.CreateTradeSignal)
+	r.GET("/signals", handler.GetTradeSignals)
 
 	r.POST("/create-checkout", billing.CreateCheckout)
 	r.POST("/webhook", billing.StripeWebhook)
