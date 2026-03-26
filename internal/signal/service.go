@@ -8,15 +8,15 @@ import (
 )
 
 type TradeSignal struct {
-	ID        int
-	Symbol    string
-	Type      string
-	Price     float64
-	Tp        float64
-	Sl        float64
-	IsActive  bool
-	Status    int
-	CreatedAt string
+	ID        int     `json:"id"`
+	Symbol    string  `json:"symbol"`
+	Type      string  `json:"type"`
+	Price     float64 `json:"price"`
+	Tp        float64 `json:"tp"`
+	Sl        float64 `json:"sl"`
+	IsActive  bool    `json:"isActive"`
+	Status    int     `json:"status"`
+	CreatedAt string  `json:"created_at"`
 }
 
 func GetAllSignals() []TradeSignal {
