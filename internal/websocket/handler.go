@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"time"
 
+	"trading-api/internal/signal"
+
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 )
@@ -25,6 +27,14 @@ func HandleWS(c *gin.Context) {
 	log.Println("Client connected")
 
 	go keepAlive(conn)
+
+	go func() {
+		data := signal.GetAllSignals()
+		conn.WriteJSON(map[string]interface{}{
+			"type": "INIT",
+			"data": data,
+		})
+	}()
 
 	for {
 		_, _, err := conn.ReadMessage()
