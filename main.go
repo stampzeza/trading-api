@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"trading-api/internal/billing"
 	"trading-api/internal/db"
 	"trading-api/internal/handler"
 	"trading-api/internal/middleware"
@@ -16,7 +17,7 @@ func main() {
 	if port == "" {
 		port = "8080" // ใช้ตอน local
 	}
-
+	go websocket.ListenSignalChanges()
 	r := gin.New()
 	r.Use(gin.Logger())
 	r.Use(gin.Recovery())
@@ -29,6 +30,9 @@ func main() {
 	r.POST("/addSignal", handler.CreateTradeSignal)
 	r.POST("/updateSignal", handler.UpdateTradeSignal)
 	r.GET("/signals", handler.CreateTradeSignal)
+
+	r.POST("/create-checkout", billing.CreateCheckout)
+	r.POST("/webhook", billing.StripeWebhook)
 
 	r.Run(":" + port) // 👈 ต้องใช้แบบนี้
 }

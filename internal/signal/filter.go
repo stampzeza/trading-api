@@ -1,5 +1,10 @@
 package signal
 
+import (
+	"context"
+	"trading-api/internal/db"
+)
+
 func FilterSignals(userID *string, signals []TradeSignal) []TradeSignal {
 
 	// ❌ ยังไม่ login
@@ -8,7 +13,7 @@ func FilterSignals(userID *string, signals []TradeSignal) []TradeSignal {
 	}
 
 	// 🔥 TODO: เช็ค subscription จริง (ตอนนี้ mock ไปก่อน)
-	isSubscribed := false
+	isSubscribed := checkSubscription(userID)
 
 	if !isSubscribed {
 		return onlyInactive(signals)
@@ -27,4 +32,20 @@ func onlyInactive(signals []TradeSignal) []TradeSignal {
 	}
 
 	return result
+}
+
+func checkSubscription(userID *string) bool {
+
+	var status string
+
+	err := db.DB.QueryRow(context.Background(),
+		`SELECT status FROM subscriptions WHERE user_id=$1`,
+		*userID,
+	).Scan(&status)
+
+	if err != nil {
+		return false
+	}
+
+	return status == "active"
 }

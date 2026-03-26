@@ -7,7 +7,10 @@ require (
 	github.com/jackc/pgx/v5 v5.9.1
 )
 
-require github.com/golang-jwt/jwt/v5 v5.3.1 // indirect
+require (
+	github.com/golang-jwt/jwt/v5 v5.3.1 // indirect
+	github.com/stripe/stripe-go/v78 v78.12.0 // indirect
+)
 
 require (
 	github.com/bytedance/gopkg v0.1.4 // indirect
