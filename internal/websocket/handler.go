@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"trading-api/internal/auth"
 	"trading-api/internal/signal"
 
 	"github.com/gin-gonic/gin"
@@ -17,22 +18,40 @@ var upgrader = websocket.Upgrader{
 }
 
 func HandleWS(c *gin.Context) {
+	tokenStr := c.Query("token")
+
+	var userID *string
+
+	if tokenStr != "" {
+		claims, err := auth.VerifyToken(tokenStr)
+		if err == nil {
+			userID = &claims.UserID
+		}
+	}
+
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
 		log.Println(err)
 		return
 	}
+	client := &Client{
+		Conn:   conn,
+		UserID: userID,
+	}
 
-	Clients[conn] = true
+	Clients[client] = true
 	log.Println("Client connected")
 
-	go keepAlive(conn)
+	go keepAlive(client)
 
 	go func() {
 		data := signal.GetAllSignals()
+
+		filtered := signal.FilterSignals(client.UserID, data)
+
 		conn.WriteJSON(map[string]interface{}{
 			"type": "INIT",
-			"data": data,
+			"data": filtered,
 		})
 	}()
 
@@ -40,20 +59,20 @@ func HandleWS(c *gin.Context) {
 		_, _, err := conn.ReadMessage()
 		if err != nil {
 			conn.Close()
-			delete(Clients, conn)
+			delete(Clients, client)
 			break
 		}
 	}
 }
 
-func keepAlive(conn *websocket.Conn) {
+func keepAlive(client *Client) {
 	for {
 		time.Sleep(20 * time.Second)
 
-		err := conn.WriteMessage(websocket.PingMessage, nil)
+		err := client.Conn.WriteMessage(websocket.PingMessage, nil)
 		if err != nil {
-			conn.Close()
-			delete(Clients, conn)
+			client.Conn.Close()
+			delete(Clients, client)
 			return
 		}
 	}
