@@ -53,6 +53,7 @@ func main() {
 	})
 	r.POST("/trade", createTrade)
 	r.POST("/addSignal", createTradeSignal)
+	r.POST("/updateSignal", updateTradeSignal)
 	r.GET("/signals", getTradeSignals)
 
 	r.Run(":" + port) // 👈 ต้องใช้แบบนี้
@@ -120,6 +121,26 @@ func createTradeSignal(c *gin.Context) {
 	}
 
 	c.JSON(200, gin.H{"status": "saved Create Signal Success."})
+}
+
+func updateTradeSignal(c *gin.Context) {
+	var t TradeSignal
+	if err := c.ShouldBindJSON(&t); err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+
+	_, err := db.Exec(context.Background(),
+		`UPDATE "tbTradeSignal" SET status=$1, isactive=$2 WHERE tp=$3 and sl=$4`,
+		t.Status, t.IsActive, t.Tp, t.Sl,
+	)
+
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{"status": "saved Update Signal Success."})
 }
 
 func getTradeSignals(c *gin.Context) {
